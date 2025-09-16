@@ -1,0 +1,64 @@
+services:
+  mariadb:
+    build: requirements/mariadb/.
+    image: mariadb
+    container_name: mariadb
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    env_file:
+      - .env
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p$MYSQL_ROOT_PASSWORD"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - ft_inception
+    restart: always
+  
+  wordpress:
+    build: requirements/wordpress/.
+    image: wordpress
+    container_name: wordpress
+    volumes:
+      - wordpress_data:/var/www/html
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    env_file:
+      - .env
+    networks:
+      - ft_inception
+    restart: always
+
+  nginx:
+    build: requirements/nginx/.
+    container_name: nginx
+    image: nginx
+    ports:
+      - "443:443"
+    depends_on:
+      - wordpress
+    volumes:
+      - wordpress_data:/var/www/html
+    networks:
+      - ft_inception
+    restart: always
+
+volumes:
+  mariadb_data:
+    name: mariadb
+    driver_opts:
+      type: none
+      o: bind
+      device: /home/luiberna/data
+  wordpress_data:
+    name: wordpress
+    driver_opts:
+      type: none
+      o: bind
+      device: /home/luiberna/data
+
+networks:
+  ft_inception:
+    driver: bridge
